@@ -2,9 +2,24 @@ import withPWAInit from 'next-pwa'
 
 const isDev = process.env.NODE_ENV === 'development'
 
-export default withPWAInit({
+const nextConfig = {
+  images: {
+    remotePatterns: [
+      {
+        protocol: 'https',
+        hostname: 'vercel.app',
+      },
+      {
+        protocol: 'https',
+        hostname: 'your-app.vercel.app',
+      },
+    ],
+  }
+}
+
+const pwaConfig = withPWAInit({
   dest: 'public',
-  register: false, // Manual registration
+  register: false,
   skipWaiting: true,
   disable: process.env.NODE_ENV === 'development',
   sw: 'sw.js',
@@ -17,7 +32,7 @@ export default withPWAInit({
         cacheName: 'http-cache',
         expiration: {
           maxEntries: 100,
-          maxAgeSeconds: 24 * 60 * 60 // 24 hours
+          maxAgeSeconds: 24 * 60 * 60
         }
       }
     },
@@ -30,3 +45,5 @@ export default withPWAInit({
     }
   ]
 })
+
+export default { ...nextConfig, ...pwaConfig }
