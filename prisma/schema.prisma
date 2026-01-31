@@ -1,0 +1,164 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+// Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?
+// Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id            String    @id @default(cuid())
+  email         String    @unique
+  name          String?
+  avatar        String?
+  timezone      String    @default("UTC")
+  reminderTime  String?   // HH:MM format
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+  
+  // Relations
+  habits        Habit[]
+  habitRecords  HabitRecord[]
+  achievements  UserAchievement[]
+  socialPosts   SocialPost[]
+  accounts      Account[]
+  sessions      Session[]
+  
+  @@map("users")
+}
+
+model Habit {
+  id          String      @id @default(cuid())
+  title       String
+  description String?
+  icon        String?     // emoji or icon name
+  color       String      @default("#6366f1")
+  category    String?
+  frequency   Frequency   @default(DAILY)
+  targetCount Int?        // For habits with targets (e.g., drink 8 glasses)
+  unit        String?     // e.g., "glasses", "minutes", "pages"
+  isActive    Boolean     @default(true)
+  createdAt   DateTime    @default(now())
+  updatedAt   DateTime    @updatedAt
+  
+  // Relations
+  userId      String
+  user        User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+  records     HabitRecord[]
+  
+  @@map("habits")
+}
+
+model HabitRecord {
+  id          String    @id @default(cuid())
+  date        DateTime  @default(now())
+  value       Int?      // For habits with targets
+  completed   Boolean   @default(false)
+  note        String?
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+  
+  // Relations
+  habitId     String
+  habit       Habit      @relation(fields: [habitId], references: [id], onDelete: Cascade)
+  userId      String
+  user        User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  @@unique([habitId, date])
+  @@map("habit_records")
+}
+
+model Achievement {
+  id            String  @id @default(cuid())
+  title         String
+  description   String
+  icon          String
+  condition     String  // JSON condition for earning
+  points        Int     @default(0)
+  createdAt     DateTime @default(now())
+  
+  // Relations
+  userAchievements UserAchievement[]
+  
+  @@map("achievements")
+}
+
+model UserAchievement {
+  id            String    @id @default(cuid())
+  earnedAt      DateTime  @default(now())
+  
+  // Relations
+  userId        String
+  user          User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  achievementId String
+  achievement   Achievement @relation(fields: [achievementId], references: [id])
+  
+  @@unique([userId, achievementId])
+  @@map("user_achievements")
+}
+
+model SocialPost {
+  id        String    @id @default(cuid())
+  content   String?
+  type      PostType  @default(PROGRESS)
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+  
+  // Relations
+  userId    String
+  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  @@map("social_posts")
+}
+
+enum Frequency {
+  DAILY
+  WEEKLY
+  MONTHLY
+  CUSTOM
+}
+
+enum PostType {
+  PROGRESS
+  MILESTONE
+  CHALLENGE
+}
+
+// NextAuth.js models
+model Account {
+  id                String  @id @default(cuid())
+  userId            String
+  type              String
+  provider          String
+  providerAccountId String
+  refresh_token     String? @db.Text
+  access_token      String? @db.Text
+  expires_at        Int?
+  token_type        String?
+  scope             String?
+  id_token          String? @db.Text
+  session_state     String?
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  @@unique([provider, providerAccountId])
+  @@map("accounts")
+}
+
+model Session {
+  id           String   @id @default(cuid())
+  sessionToken String   @unique
+  userId       String
+  expires      DateTime
+  
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("sessions")
+}
